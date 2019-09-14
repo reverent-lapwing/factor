@@ -1,6 +1,6 @@
 ! Copyright (C) 2019 Atena Swoja.
 ! See http://factorcode.org/license.txt for BSD license.
-USING: tools.test 2048 2048.private fry sequence-utils assocs macros quotations math grouping memoize arrays sets io formatting continuations ; 
+USING: tools.test 2048-game 2048-game.private fry sequence-utils assocs macros quotations math grouping memoize arrays sets io formatting continuations ; 
 EXCLUDE: kernel => build ;
 EXCLUDE: sequences => move ;
 FROM: accessors => tiles>> >>tiles  width>> height>> change-tiles level>> ;
@@ -67,17 +67,17 @@ MEMO: mismatching-pairs ( n -- seq )
 
 ! ]]
 
-: test-games ( -- seq )
+: test-boards ( -- seq )
     {
-        [ 1 1 <game> ]
-        [ 1 1 <game> { 1 } [ <tile> ] map >>tiles ]
-        [ 1 1 <game> { 2 } [ <tile> ] map >>tiles ]
-        [ 1 1 <game> { 3 } [ <tile> ] map >>tiles ]
-        [ 1 1 <game> { 4 } [ <tile> ] map >>tiles ]
-        [ 1 1 <game> { 5 } [ <tile> ] map >>tiles ]
-        [ 1 1 <game> { 6 } [ <tile> ] map >>tiles ]
-        [ 1 1 <game> { 7 } [ <tile> ] map >>tiles ]
-        [ 1 1 <game> { 8 } [ <tile> ] map >>tiles ]
+        [ 1 1 <board> ]
+        [ 1 1 <board> { 1 } [ <tile> ] map >>tiles ]
+        [ 1 1 <board> { 2 } [ <tile> ] map >>tiles ]
+        [ 1 1 <board> { 3 } [ <tile> ] map >>tiles ]
+        [ 1 1 <board> { 4 } [ <tile> ] map >>tiles ]
+        [ 1 1 <board> { 5 } [ <tile> ] map >>tiles ]
+        [ 1 1 <board> { 6 } [ <tile> ] map >>tiles ]
+        [ 1 1 <board> { 7 } [ <tile> ] map >>tiles ]
+        [ 1 1 <board> { 8 } [ <tile> ] map >>tiles ]
     } build
 ;
 
@@ -92,7 +92,7 @@ MEMO: mismatching-pairs ( n -- seq )
     "010107"
     "010108"
   }
-  test-games
+  test-boards
   [ serialize ] map
   assert-sequence=
 ] unit-test
@@ -101,26 +101,26 @@ MEMO: mismatching-pairs ( n -- seq )
     [ length ] dip assert=
 ;
 
-MEMO: all-games ( n -- assoc )
-    all-pairs [ dup [ '[ _ ] ] map concat call( -- w h ) <game> { } 2sequence ] map 
+MEMO: all-boards ( n -- assoc )
+    all-pairs [ dup [ '[ _ ] ] map concat call( -- w h ) <board> { } 2sequence ] map 
 ;
 
-: all-valid-games ( n -- assoc )
-    all-pairs [ dup [ '[ _ ] ] map concat call( -- w h ) [ <game> { } 2sequence ] [ 4drop f ] recover ] map sift
+: all-valid-boards ( n -- assoc )
+    all-pairs [ dup [ '[ _ ] ] map concat call( -- w h ) [ <board> { } 2sequence ] [ 4drop f ] recover ] map sift
 ;
 
-: each-game ( ... n quot: ( ... key game -- ... ) -- ... )
-    [ all-games ] dip '[ _ [ 2drop "Error in %[%d, %]" printf nl rethrow ] recover ] assoc-each
+: each-board ( ... n quot: ( ... key board -- ... ) -- ... )
+    [ all-boards ] dip '[ _ [ 2drop "Error in %[%d, %]" printf nl rethrow ] recover ] assoc-each
 ; inline
 
-: each-valid-game ( n -- assoc )
-    [ all-valid-games ] dip '[ _ [ [ drop "Error in %[%d, %]" printf nl ] dip rethrow ] recover ] assoc-each
+: each-valid-board ( n -- assoc )
+    [ all-valid-boards ] dip '[ _ [ [ drop "Error in %[%d, %]" printf nl ] dip rethrow ] recover ] assoc-each
 ; inline
 
-{ } [ 100 all-valid-games     clear ] unit-test
-{ } [ 100 [ [ [ first ] [ second ] bi 2drop ] [ drop ] bi* ] each-valid-game clear ] unit-test
-[ 100 all-games ] must-fail
-[ 100 [ 2drop ] each-game ] must-fail
+{ } [ 100 all-valid-boards     clear ] unit-test
+{ } [ 100 [ [ [ first ] [ second ] bi 2drop ] [ drop ] bi* ] each-valid-board clear ] unit-test
+[ 100 all-boards ] must-fail
+[ 100 [ 2drop ] each-board ] must-fail
 
 { } [
     4 all-pairs
@@ -132,7 +132,7 @@ MEMO: all-games ( n -- assoc )
     } set= t assert= ] unit-test
 
 { } [
-    4 all-valid-games 
+    4 all-valid-boards 
     [ second serialize ] map
     { 
       "010100"       "01020000"             "0103000000"                   "010400000000"
@@ -143,28 +143,28 @@ MEMO: all-games ( n -- assoc )
 
 ! [[ dimensions
 
-{ } [ 100 [ [ first   ] [ [   width>>                     ] [ columns>> length ] bi ] bi* [ assert= ] keep assert= ] each-valid-game ] unit-test
-{ } [ 100 [ [ second  ] [ [               height>>        ] [ rows>>    length ] bi ] bi* [ assert= ] keep assert= ] each-valid-game ] unit-test
-{ } [ 100 [ [ product ] [ [ [ width>> ] [ height>> ] bi * ] [ tiles>>   length ] bi ] bi* [ assert= ] keep assert= ] each-valid-game ] unit-test
+{ } [ 100 [ [ first   ] [ [   width>>                     ] [ columns>> length ] bi ] bi* [ assert= ] keep assert= ] each-valid-board ] unit-test
+{ } [ 100 [ [ second  ] [ [               height>>        ] [ rows>>    length ] bi ] bi* [ assert= ] keep assert= ] each-valid-board ] unit-test
+{ } [ 100 [ [ product ] [ [ [ width>> ] [ height>> ] bi * ] [ tiles>>   length ] bi ] bi* [ assert= ] keep assert= ] each-valid-board ] unit-test
 
 ! ]] 
 
 ! [[ logic
 
-[ 0 0 <game> ] must-fail
+[ 0 0 <board> ] must-fail
 
-{ } [ 4 4 <game> clear ] unit-test
-{ } [ 4 4 <game> space-left? clear ] unit-test
-{ } [ 4 4 <game> tiles>> empty-indices clear ] unit-test
-{ } [ 4 4 <game> space-left? clear ] unit-test
-{ { f } } [ 1 1 <game> tiles>> ] unit-test
+{ } [ 4 4 <board> clear ] unit-test
+{ } [ 4 4 <board> space-left? clear ] unit-test
+{ } [ 4 4 <board> tiles>> empty-indices clear ] unit-test
+{ } [ 4 4 <board> space-left? clear ] unit-test
+{ { f } } [ 1 1 <board> tiles>> ] unit-test
 { { 0 } } [ { f } empty-indices ] unit-test
 { { } } [ { 1 } empty-indices ] unit-test
-{ { 0 } } [ 1 1 <game> tiles>> empty-indices ] unit-test
-{ } [ 4 4 <game> add-tile clear ] unit-test
-{ } [ 4 [ [ product ] [ tiles>> empty-indices length ] bi* assert= ] each-valid-game ] unit-test
-{ } [ 4 [ [ product ]     [ [ '[ _ add-tile ] times ] keep space-left? ] bi* f assert= ] each-valid-game ] unit-test
-{ } [ 4 [ [ product 1 - ] [ [ '[ _ add-tile ] times ] keep space-left? ] bi* t assert= ] each-valid-game ] unit-test
+{ { 0 } } [ 1 1 <board> tiles>> empty-indices ] unit-test
+{ } [ 4 4 <board> add-tile clear ] unit-test
+{ } [ 4 [ [ product ] [ tiles>> empty-indices length ] bi* assert= ] each-valid-board ] unit-test
+{ } [ 4 [ [ product ]     [ [ '[ _ add-tile ] times ] keep space-left? ] bi* f assert= ] each-valid-board ] unit-test
+{ } [ 4 [ [ product 1 - ] [ [ '[ _ add-tile ] times ] keep space-left? ] bi* t assert= ] each-valid-board ] unit-test
 ! test if 1/10 of created tiles are a 4 instead of a 2
 
 : about-equal ( value expected tolerance -- ? )
@@ -184,19 +184,19 @@ MEMO: all-games ( n -- assoc )
   }
 } [ "020202020101" deserialize columns>> ] unit-test
 
-{ } [ 2 2 <game> [ [ ] map ] change-rows clear ] unit-test
-{ } [ 2 2 <game> [ [ ] map ] change-columns clear ] unit-test
-{ } [ 2 2 <game> [ [ [ ] map ] map ] change-rows clear ] unit-test
-{ } [ 2 2 <game> [ [ [ ] map ] map ] change-columns clear ] unit-test
+{ } [ 2 2 <board> [ [ ] map ] change-rows clear ] unit-test
+{ } [ 2 2 <board> [ [ ] map ] change-columns clear ] unit-test
+{ } [ 2 2 <board> [ [ [ ] map ] map ] change-rows clear ] unit-test
+{ } [ 2 2 <board> [ [ [ ] map ] map ] change-columns clear ] unit-test
 
 
-{ "020201010101" } [ 2 2 <game> [ [ [ drop 1 <tile> ] map ] map ] change-rows serialize ] unit-test
-{ "020202020202" } [ 2 2 <game> [ [ [ drop 2 <tile> ] map ] map ] change-columns serialize ] unit-test
-{ "020201020102" } [ 2 2 <game> [ [ 0 [ drop 1 + ] accumulate* [ <tile> ] map ] map ] change-rows serialize ] unit-test
-{ "020201010202" } [ 2 2 <game> [ [ 0 [ drop 1 + ] accumulate* [ <tile> ] map ] map ] change-columns serialize ] unit-test
+{ "020201010101" } [ 2 2 <board> [ [ [ drop 1 <tile> ] map ] map ] change-rows serialize ] unit-test
+{ "020202020202" } [ 2 2 <board> [ [ [ drop 2 <tile> ] map ] map ] change-columns serialize ] unit-test
+{ "020201020102" } [ 2 2 <board> [ [ 0 [ drop 1 + ] accumulate* [ <tile> ] map ] map ] change-rows serialize ] unit-test
+{ "020201010202" } [ 2 2 <board> [ [ 0 [ drop 1 + ] accumulate* [ <tile> ] map ] map ] change-columns serialize ] unit-test
 
-{ "020202000200" } [ 2 2 <game> [ [ [ drop 1 <tile> ] map ] map ] change-rows [ left move ] keep serialize ] unit-test
-{ "020203000300" } [ 2 2 <game> [ [ [ drop 2 <tile> ] map ] map ] change-columns [ left move ] keep serialize ] unit-test
+{ "020202000200" } [ 2 2 <board> [ [ [ drop 1 <tile> ] map ] map ] change-rows [ left move ] keep serialize ] unit-test
+{ "020203000300" } [ 2 2 <board> [ [ [ drop 2 <tile> ] map ] map ] change-columns [ left move ] keep serialize ] unit-test
 
 { "040102020000" } [ "040102000101" deserialize [ left move ] keep serialize ] unit-test
 { "040100000202" } [ "040102000101" deserialize [ right move ] keep serialize ] unit-test
@@ -204,9 +204,9 @@ MEMO: all-games ( n -- assoc )
 { f } [ "020201010101" deserialize lost? ] unit-test
 { t } [ "020201020201" deserialize lost? ] unit-test
 
-{ } [ 11 <iota> [ '[ 1 1 <game> [ [ [ _ <tile> 0 ] dip set-nth ] keep ] change-tiles lost? ] call t assert= ] each ] unit-test
-{ } [ 11 <iota> [ '[ 1 1 <game> [ [ [ _ <tile> 0 ] dip set-nth ] keep ] change-tiles won? ] call f assert= ] each ] unit-test
-{ } [ 11 <iota> [ '[ 1 1 <game> [ [ [ _ 11 + <tile> 0 ] dip set-nth ] keep ] change-tiles lost? ] call f assert= ] each ] unit-test
-{ } [ 11 <iota> [ '[ 1 1 <game> [ [ [ _ 11 + <tile> 0 ] dip set-nth ] keep ] change-tiles won? ] call t assert= ] each ] unit-test
+{ } [ 11 <iota> [ '[ 1 1 <board> [ [ [ _ <tile> 0 ] dip set-nth ] keep ] change-tiles lost? ] call t assert= ] each ] unit-test
+{ } [ 11 <iota> [ '[ 1 1 <board> [ [ [ _ <tile> 0 ] dip set-nth ] keep ] change-tiles won? ] call f assert= ] each ] unit-test
+{ } [ 11 <iota> [ '[ 1 1 <board> [ [ [ _ 11 + <tile> 0 ] dip set-nth ] keep ] change-tiles lost? ] call f assert= ] each ] unit-test
+{ } [ 11 <iota> [ '[ 1 1 <board> [ [ [ _ 11 + <tile> 0 ] dip set-nth ] keep ] change-tiles won? ] call t assert= ] each ] unit-test
 
 ! ]]

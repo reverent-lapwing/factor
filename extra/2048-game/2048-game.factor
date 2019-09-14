@@ -1,6 +1,6 @@
 ! Copyright (C) 2019 Atena Swoja.
 ! See http://factorcode.org/license.txt for BSD license.
-FROM: accessors => change-level change-tiles height>> level>> lost<< tiles>> tiles<< width>> ;
+USE: accessors
 FROM: arrays => <array> array ;
 FROM: assocs => assoc-filter keys zip ;
 FROM: combinators => case cleave cond ;
@@ -19,7 +19,7 @@ FROM: random => random sample ;
 FROM: sequences => <iota> <repetition> any? all? append concat each first flip head if-empty interleave length map pop push reduce reverse second set-nth tail ;
 FROM: sorting => sort ;
 FROM: vectors => <vector> ;
-IN: 2048
+IN: 2048-game
 
 
 ERROR: invalid-board ;
@@ -33,11 +33,10 @@ TUPLE: tile
 { level integer }
 ;
 
-TUPLE: game
+TUPLE: board
 { width integer }
 { height integer }
 { tiles array }
-{ lost boolean }
 ;
 
 M: tile equal?
@@ -48,16 +47,13 @@ M: tile equal?
     2&&
 ;
 
-! draws an object
-GENERIC: draw ( obj -- )
-
-: valid-game? ( w h -- ? )
+: valid-board? ( w h -- ? )
     * 0 > ! board with 0 tiles does not have a meaningful representation
 ;
 
-: <game> ( w h -- game )
-    [ valid-game? [ invalid-board throw ] unless ]
-    [ 2dup * f <array> f game boa ] 2bi
+: <board> ( w h -- board )
+    [ valid-board? [ invalid-board throw ] unless ]
+    [ 2dup * f <array> board boa ] 2bi
 ;
 
 : <tile> ( n -- tile ) 
@@ -72,32 +68,32 @@ GENERIC: draw ( obj -- )
 
 <PRIVATE
 
-: space-left? ( game -- ? )
+: space-left? ( board -- ? )
     tiles>> [ f = ] any?
 ;
 
-: rows>> ( game -- seq )
+: rows>> ( board -- seq )
     dup tiles>>
     [ drop { } ] [ swap width>> group ] if-empty
 ;
 
-: rows<< ( seq game -- )
+: rows<< ( seq board -- )
     [ concat ] dip tiles<<
 ;
 
-: columns>> ( game -- seq )
+: columns>> ( board -- seq )
     rows>> flip
 ;
 
-: columns<< ( seq game -- )
+: columns<< ( seq board -- )
     [ flip concat ] dip tiles<<
 ;
 
-: change-rows ( game quote -- game )
+: change-rows ( board quote -- board )
     over [ rows>> swap call( seq -- seq ) ] [ rows<< ] bi 
 ; inline
 
-: change-columns ( game quote -- game )
+: change-columns ( board quote -- board )
     over [ columns>> swap call( seq -- seq ) ] [ columns<< ] bi 
 ; inline
 
@@ -120,7 +116,7 @@ GENERIC: draw ( obj -- )
     } 1&&
 ;
 
-: can-move-direction? ( game direction -- ? )
+: can-move-direction? ( board direction -- ? )
     {
         { left  [ rows>>    [         can-move-left? ] any? ] }
         { right [ rows>>    [ reverse can-move-left? ] any? ] }
@@ -129,7 +125,7 @@ GENERIC: draw ( obj -- )
     } case
 ;
 
-: can-move-any? ( game -- ? )
+: can-move-any? ( board -- ? )
     { left right up down } [ can-move-direction? ] with any?
 ;
 
@@ -143,7 +139,7 @@ GENERIC: draw ( obj -- )
 ;
 
 ! create a new tile on an empty space
-: add-tile ( game -- )
+: add-tile ( board -- )
     [ new-tile swap [ empty-indices pick-random ] keep [ set-nth ] keep ] change-tiles drop
 ;
 
@@ -183,17 +179,18 @@ GENERIC: draw ( obj -- )
     justify-left
 ;
 
+! draws an object
+GENERIC: draw ( obj -- )
+
 PRIVATE>
 
-
-
 ! a single tile is higher than 2048 (level 10)
-: won? ( game -- ? ) 
+: won? ( board -- ? ) 
     tiles>> [ dup [ level>> 11 >= ] when ] any? 
 ;
 
-! if there is no space left and no neightboring tiles are the same, end the game
-: lost? ( game -- ? ) 
+! if there is no space left and no neightboring tiles are the same, end the board
+: lost? ( board -- ? ) 
     {
         [ space-left? ]
         [ won? ]
@@ -201,7 +198,7 @@ PRIVATE>
     } 1|| not
 ;
 
-: serialize ( game -- str )
+: serialize ( board -- str )
     [ width>> ]
     [ height>> ]
     [ tiles>>
@@ -210,16 +207,14 @@ PRIVATE>
     "%02x%02x%s" sprintf
 ;
 
-: deserialize ( str -- game )
+: deserialize ( str -- board )
     [ 2 head hex> ] [ 2 tail ] bi
     [ 2 head hex> ] [ 2 tail ] bi
     2 group [ hex> dup 0 = [ drop f ] [ tile boa ] if ] map
-    f
-    game boa
-    [ lost? ] [ lost<< ] [ ] tri
+    board boa
 ;
 
-: move ( game direction -- )
+: move ( board direction -- )
     {
         { left  [ [ [         collapse         ] map ] change-rows    ] }
         { right [ [ [ reverse collapse reverse ] map ] change-rows    ] }
@@ -245,7 +240,9 @@ PRIVATE>
     } case
 ;
 
-: init ( game -- )
+<PRIVATE
+
+: init ( board -- )
     '[ _ add-tile ] 2 swap times
 ; 
 
@@ -257,7 +254,7 @@ M: boolean draw ( _ -- )
     drop 4 [ bl ] times
 ;
 
-: horizontal-line ( game -- )
+: horizontal-line ( board -- )
     width>>
     " " write
     "+------" <repetition> concat
@@ -268,7 +265,7 @@ M: boolean draw ( _ -- )
     " | " write
 ;
 
-M: game draw ( game -- )
+M: board draw ( board -- )
     [ horizontal-line ] keep
     [ rows>> ]
     [ 
@@ -283,7 +280,7 @@ M: game draw ( game -- )
     flush
 ;
 
-: update ( game -- f )
+: update ( board -- f )
     {
         [ 
             get-input parse-input [
@@ -297,7 +294,7 @@ M: game draw ( game -- )
     } 1&&
 ;
 
-: exit ( game -- )
+: exit ( board -- )
     { 
         { [ dup lost? ] [ "You lost! Better luck next time." write nl ] }
         { [ dup won?  ] [ "You won! Congratulations!" write nl ] }
@@ -305,8 +302,10 @@ M: game draw ( game -- )
     } cond drop
 ;
 
+PRIVATE>
+
 : start-2048 ( -- ) 
-    4 4 <game>
+    4 4 <board>
     [ 
         ! Initialization
         [ init ]
