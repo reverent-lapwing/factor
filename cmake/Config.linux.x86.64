@@ -1,2 +1,2 @@
-include vm/Config.linux
-include vm/Config.x86.64
+include( ${PROJECT_SOURCE_DIR}/cmake/Config.linux )
+include( ${PROJECT_SOURCE_DIR}/cmake/Config.x86.64 )
