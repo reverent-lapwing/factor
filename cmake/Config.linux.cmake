@@ -1,4 +1,4 @@
-include( ${PROJECT_SOURCE_DIR}/cmake/Config.unix )
+include( ${PROJECT_SOURCE_DIR}/cmake/Config.unix.cmake )
 set( PLAF_DLL_OBJS ${PLAF_DLL_OBJS} vm/os-genunix.o vm/os-linux.o vm/mvm-unix.o)
 set( PLAF_MASTER_HEADERS ${PLAF_MASTER_HEADERS} vm/os-genunix.hpp vm/os-linux.hpp )
 set( LIBS -ldl -lm -lrt -lpthread -Wl,--export-dynamic )
