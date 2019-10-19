@@ -6,8 +6,8 @@ set( LIBS -ldl -lm -lrt -lpthread -Wl,--export-dynamic )
 # clang spams warnings if we use -Wl,--no-as-needed with -c
 # -Wl,--no-as-needed is a gcc optimization, not required
 # we want to work with g++ aliased as c++ here, too
-execute_process( COMMAND ${CXX} "--version" COMMAND grep 'Free Software Foundation' RESULT_VARIABLE IS_GCC )
+execute_process( COMMAND ${CXX} "--version" COMMAND grep "'Free Software Foundation'" RESULT_VARIABLE IS_GCC )
 
-if (${IS_GCC} EQUAL 0)
+if ( ${IS_GCC} EQUAL 0 )
 	set( SITE_CFLAGS ${SITE_CFLAGS} -Wl,--no-as-needed )
 endif()

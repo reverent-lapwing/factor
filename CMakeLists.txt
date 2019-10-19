@@ -1,169 +1,115 @@
-
 cmake_minimum_required( VERSION 3.10 )
 
 project( factor )
 
-include_directories( "vm/" )
+# TODO: Here goes test for system we are building for
 
-set( DLL_OBJS $(PLAF_DLL_OBJS) 
-		vm/aging_collector.o 
-		vm/alien.o 
-		vm/arrays.o 
-		vm/bignum.o 
-		vm/byte_arrays.o 
-		vm/callbacks.o 
-		vm/callstack.o 
-		vm/code_blocks.o 
-		vm/code_heap.o 
-		vm/compaction.o 
-		vm/contexts.o 
-		vm/data_heap.o 
-		vm/data_heap_checker.o 
-		vm/debug.o 
-		vm/dispatch.o 
-		vm/entry_points.o 
-		vm/errors.o
-		vm/factor.o
-		vm/full_collector.o 
-		vm/gc.o 
-		vm/image.o 
-		vm/inline_cache.o 
-		vm/instruction_operands.o 
-		vm/io.o 
-		vm/jit.o 
-		vm/math.o 
-		vm/mvm.o 
-		vm/nursery_collector.o 
-		vm/object_start_map.o 
-		vm/objects.o 
-		vm/primitives.o 
-		vm/quotations.o 
-		vm/run.o 
-		vm/safepoints.o 
-		vm/sampling_profiler.o 
-		vm/strings.o 
-		vm/to_tenured_collector.o 
-		vm/tuples.o 
-		vm/utilities.o 
-		vm/vm.o 
-		vm/words.o
+set( TARGET_ARCH linux-x86-64 )
+
+include( "${PROJECT_SOURCE_DIR}/cmake/Config.cmake" )
+
+#$(ENGINE): $(DLL_OBJS)
+#	$(TOOLCHAIN_PREFIX)$(LINKER) $(ENGINE) $(DLL_OBJS)
+#
+#factor-lib: $(ENGINE)
+
+add_library( ${ENGINE} ${DLL_OBJS} )
+set_target_properties( ${ENGINE} PROPERTIES OUTPUT_NAME factor )
+
+add_library( factor-lib ALIAS ${ENGINE} )
+
+#factor: $(EXE_OBJS) $(DLL_OBJS)
+#	$(TOOLCHAIN_PREFIX)$(CXX) -L. $(DLL_OBJS) \
+#		$(CFLAGS) $(CXXFLAGS) -o $(EXECUTABLE) $(LIBS) $(EXE_OBJS)
+
+add_executable( factor ${DLL_OBJS} ${EXE_OBJS} )
+set_target_properties( factor PROPERTIES 
+    OUTPUT_NAME ${EXECUTABLE}
+    COMPILE_OPTIONS "${CMAKE_C_FLAGS};${CMAKE_CXX_FLAGS}"
+    COMPILE_DEFINITIONS "${CMAKE_C_DEFINITIONS}"
 )
-	
-set( MASTER_HEADERS $(PLAF_MASTER_HEADERS) 
-		vm/assert.hpp 
-		vm/debug.hpp 
-		vm/layouts.hpp 
-		vm/platform.hpp 
-		vm/primitives.hpp 
-		vm/segments.hpp 
-		vm/gc_info.hpp 
-		vm/contexts.hpp 
-		vm/run.hpp 
-		vm/objects.hpp 
-		vm/sampling_profiler.hpp 
-		vm/errors.hpp 
-		vm/bignumint.hpp 
-		vm/bignum.hpp 
-		vm/booleans.hpp 
-		vm/instruction_operands.hpp 
-		vm/code_blocks.hpp 
-		vm/bump_allocator.hpp 
-		vm/bitwise_hacks.hpp 
-		vm/mark_bits.hpp 
-		vm/free_list.hpp 
-		vm/fixup.hpp 
-		vm/write_barrier.hpp 
-		vm/object_start_map.hpp 
-		vm/aging_space.hpp 
-		vm/tenured_space.hpp 
-		vm/data_heap.hpp 
-		vm/code_heap.hpp 
-		vm/gc.hpp 
-		vm/float_bits.hpp 
-		vm/io.hpp 
-		vm/image.hpp 
-		vm/callbacks.hpp 
-		vm/dispatch.hpp 
-		vm/vm.hpp 
-		vm/allot.hpp 
-		vm/tagged.hpp 
-		vm/data_roots.hpp 
-		vm/code_roots.hpp 
-		vm/generic_arrays.hpp 
-		vm/callstack.hpp 
-		vm/slot_visitor.hpp 
-		vm/to_tenured_collector.hpp 
-		vm/arrays.hpp 
-		vm/math.hpp 
-		vm/byte_arrays.hpp 
-		vm/jit.hpp 
-		vm/quotations.hpp 
-		vm/inline_cache.hpp 
-		vm/mvm.hpp 
-		vm/factor.hpp 
-		vm/utilities.hp
+target_link_libraries( factor ${LIBS} )
+
+#factor-console: $(EXE_OBJS) $(DLL_OBJS)
+#	$(TOOLCHAIN_PREFIX)$(CXX) -L. $(DLL_OBJS) \
+#		$(CFLAGS) $(CXXFLAGS) $(CFLAGS_CONSOLE) -o $(CONSOLE_EXECUTABLE) $(LIBS) $(EXE_OBJS)
+
+# ...
+
+#factor-ffi-test: $(FFI_TEST_LIBRARY)
+#
+#$(FFI_TEST_LIBRARY): vm/ffi_test.o
+#	$(TOOLCHAIN_PREFIX)$(CC) $(CFLAGS) $(FFI_TEST_CFLAGS) $(SHARED_FLAG) -o $(FFI_TEST_LIBRARY) $(TEST_OBJS)
+
+add_custom_target( factor-ffi-test DEPENDS ${FFI_TEST_LIBRARY} )
+
+add_custom_command (
+    OUTPUT ${FFI_TEST_LIBRARY}
+    COMMAND ${CC} ${CMAKE_C_FLAGS} ${FFI_TEST_CFLAGS} ${SHARED_FLAG} -o ${FFI_TEST_LIBRARY} ${TEST_OBJS}
+    MAIN_DEPENDENCY ${PROJECT_SOURCE_DIR}/vm/ffi_test.o
 )
 
-set( VM_SOURCES
-vm/aging_collector.cpp
-vm/alien.cpp
-vm/arrays.cpp
-vm/bignum.cpp
-vm/byte_arrays.cpp
-vm/callbacks.cpp
-vm/callstack.cpp
-vm/code_blocks.cpp
-vm/code_heap.cpp
-vm/compaction.cpp
-vm/contexts.cpp
-vm/cpu-x86.cpp
-vm/data_heap_checker.cpp
-vm/data_heap.cpp
-vm/debug.cpp
-vm/dispatch.cpp
-vm/entry_points.cpp
-vm/errors.cpp
-vm/factor.cpp
-vm/full_collector.cpp
-vm/gc.cpp
-vm/image.cpp
-vm/inline_cache.cpp
-vm/instruction_operands.cpp
-vm/io.cpp
-vm/jit.cpp
-vm/mach_signal.cpp
-vm/main-unix.cpp
-vm/main-windows.cpp
-vm/math.cpp
-vm/mvm.cpp
-vm/mvm-none.cpp
-vm/mvm-unix.cpp
-vm/mvm-windows.cpp
-vm/nursery_collector.cpp
-vm/objects.cpp
-vm/object_start_map.cpp
-vm/os-freebsd.cpp
-vm/os-genunix.cpp
-vm/os-linux-arm.cpp
-vm/os-linux.cpp
-vm/os-unix.cpp
-vm/os-windows.cpp
-vm/os-windows-x86.32.cpp
-vm/os-windows-x86.64.cpp
-vm/primitives.cpp
-vm/quotations.cpp
-vm/run.cpp
-vm/safepoints.cpp
-vm/sampling_profiler.cpp
-vm/strings.cpp
-vm/to_tenured_collector.cpp
-vm/tuples.cpp
-vm/utilities.cpp
-vm/vm.cpp
-vm/words.cpp
+#vm/resources.o:
+#	$(TOOLCHAIN_PREFIX)$(WINDRES) vm/factor.rs vm/resources.o
+
+# ...
+
+#vm/ffi_test.o: vm/ffi_test.c
+#	$(TOOLCHAIN_PREFIX)$(CC) -c $(CFLAGS) $(FFI_TEST_CFLAGS) -std=c99 -o $@ $<
+
+add_custom_command (
+    OUTPUT ${PROJECT_SOURCE_DIR}/vm/ffi_test.o
+    COMMAND ${CC} -c ${CMAKE_C_FLAGS} ${FFI_TEST_CFLAGS} -std=c99 -o ${PROJECT_SOURCE_DIR}/vm/ffi_test.o ${PROJECT_SOURCE_DIR}/vm/ffi_test.c 
+    MAIN_DEPENDENCY ${PROJECT_SOURCE_DIR}/vm/ffi_test.c
 )
 
-set( CXX_STANDARD 11 )
-set( CXX_FLAGS ${CXX_FLAGS} )
+#vm/master.hpp.gch: vm/master.hpp $(MASTER_HEADERS)
+# 	$(TOOLCHAIN_PREFIX)$(CXX) -c -x c++-header $(CFLAGS) $(CXXFLAGS) -o $@ $<
 
-add_library( factor ${VM_SOURCES} )
+add_custom_command ( 
+    OUTPUT ${PROJECT_SOURCE_DIR}/vm/master.hpp.gch
+    COMMAND ${CXX} -c -x c++-header ${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} -o ${PROJECT_SOURCE_DIR}/vm/master.hpp.gch ${PROJECT_SOURCE_DIR}/vm/master.hpp
+    MAIN_DEPENDENCY ${PROJECT_SOURCE_DIR}/vm/master.hpp
+    DEPENDS ${MASTER_HEADERS}
+)
+
+#%.o: %.cpp vm/master.hpp.gch
+#	$(TOOLCHAIN_PREFIX)$(CXX) -c $(CFLAGS) $(CXXFLAGS) -o $@ $<
+
+file( GLOB_RECURSE CXX_SRCS "${PROJECT_SOURCE_DIR}/**/*.cpp" )
+foreach( SRC ${CXX_SRCS} )
+    string( REPLACE ".cpp" ".o" OBJ ${SRC} )
+    add_custom_command (
+        OUTPUT ${OBJ}
+        COMMAND ${CXX} -c ${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} -o ${OBJ} ${SRC}
+        MAIN_DEPENDENCY ${SRC}
+        DEPENDS ${PROJECT_SOURCE_DIR}/vm/master.hpp.gch
+    )
+endforeach()
+
+#%.o: %.S
+#	$(TOOLCHAIN_PREFIX)$(CC) -c $(CFLAGS) $(CXXFLAGS) -o $@ $<
+
+file( GLOB_RECURSE ASM_SRCS "${PROJECT_SOURCE_DIR}/**/*.S" )
+foreach( SRC ${ASM_SRCS} )
+    string( REPLACE ".S" ".o" OBJ ${SRC} )
+    add_custom_command (
+        OUTPUT ${OBJ}
+        COMMAND ${CC} -c ${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} -o ${OBJ} ${SRC}
+        MAIN_DEPENDENCY ${SRC}
+    )
+endforeach()
+
+#%.o: %.mm vm/master.hpp.gch
+#	$(TOOLCHAIN_PREFIX)$(CXX) -c $(CFLAGS) $(CXXFLAGS) -o $@ $<
+
+file( GLOB_RECURSE OBJC_SRCS "${PROJECT_SOURCE_DIR}/**/*.mm" )
+foreach( SRC ${OBJC_SRCS} )
+    string( REPLACE ".mm" ".o" OBJ ${SRC} )
+    add_custom_command (
+        OUTPUT ${OBJ}
+        COMMAND ${CXX} -c ${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} -o ${OBJ} ${SRC}
+        MAIN_DEPENDENCY ${SRC}
+        DEPENDS ${PROJECT_SOURCE_DIR}/vm/master.hpp.gch
+    )
+endforeach()
